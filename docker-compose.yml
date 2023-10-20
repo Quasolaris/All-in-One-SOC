@@ -1,0 +1,73 @@
+version: "3.8"
+
+volumes:
+  elastic_data:
+    driver: local
+  kibana_data:
+    driver: local
+  suricata_data:
+    driver: local
+  suricata:
+    driver: local
+  elasticsearch:
+    driver: local
+
+services:
+  kibana:
+    image: docker.elastic.co/kibana/kibana:${STACK_VERSION}
+    volumes:
+      - kibana_data:/etc/kibana
+    ports:
+      - 5601:5601
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      KIBANA_PASSWORD: ${KIBANA_PASSWORD}
+      ELASTICSEARCH_USERNAME: kibana_system
+      ELASTICSEARCH_PASSWORD: ${KIBANA_PASSWORD}
+    container_name: kibana
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+    volumes:
+      - elasticsearch:/var/log/elasticsearch
+#      - ./elastic_config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml,ro
+      - elastic_data:/config
+    ports:
+      - 9200:9200
+    environment:
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - discovery.type=single-node
+      - cluster.name=All-In-One
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - xpack.security.enabled=false
+      - network.host=elasticsearch
+    container_name: elasticsearch
+
+  suricata:
+    image: docker.io/perara/docker-suricata
+    volumes:
+      - suricata:/var/log/suricata
+      - ./suricata_etc:/etc/suricata:Z
+      - ./scripts/suricata.sh:/suricata.sh:Z,ro
+      - ./scripts/start_suricata_services.sh:/start_suricata_services.sh:Z,ro
+      - ./filebeat_etc/filebeat.yml:/etc/filebeat/filebeat.yml:Z
+    container_name: suricata
+    networks:
+      - default
+      - portmirror
+    restart: always
+
+networks:
+  default:
+    name: elastic
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.90.0/24
+  portmirror:
+    name: portmirror
+    driver: macvlan
+    driver_opts:
+      parent:
+  #============ NO CONTENT UNDER THIS LINE!
+        ens33

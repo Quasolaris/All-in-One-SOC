@@ -1,0 +1,70 @@
+###################### Filebeat Configuration Example #########################
+
+# This file is an example configuration file highlighting only the most common
+# options. The filebeat.reference.yml file from the same directory contains all the
+# supported options with more comments. You can use it as a reference.
+#
+# You can find the full configuration reference here:
+# https://www.elastic.co/guide/en/beats/filebeat/index.html
+
+# For more available modules and options, please see the filebeat.reference.yml sample
+# configuration file.
+
+# ============================== Filebeat inputs ===============================
+
+
+
+setup.ilm.overwrite: true
+filebeat.inputs:
+- type: filestream
+  id: suricata-ids
+  enabled: false
+  paths:
+    - /var/log/suricata/fast.log
+    - /var/log/suricata/eve.json
+    - /var/log/suricata/stats.log
+
+# ============================== Filebeat modules ==============================
+
+filebeat.modules:
+  # Glob pattern for configuration loading
+ # path: ${path.config}/modules.d/*.yml
+  - module: suricata
+    eve:
+      enabled: true
+      var.paths: ["/var/log/suricata/eve.json"]
+
+# ======================= Elasticsearch template setting =======================
+
+setup.template.settings:
+  index.number_of_shards: 4
+
+# =================================== Kibana ===================================
+
+setup.kibana:
+  host: "kibana:5601"
+
+# ================================= Processors =================================
+processors:
+  - add_host_metadata:
+      when.not.contains.tags: forwarded
+  - add_cloud_metadata: ~
+  - add_docker_metadata: ~
+  - add_kubernetes_metadata: ~
+
+# ================================== Outputs ===================================
+
+# ---------------------------- Elasticsearch Output ----------------------------
+output.elasticsearch:
+  # Array of hosts to connect to.
+  hosts: ["http://elasticsearch:9200"]
+  worker: 4
+  # Protocol - either `http` (default) or `https`.
+  #protocol: "https"
+
+  # Authentication credentials - either API key or username/password.
+  #api_key: "id:api_key"
+  username: "elastic"
+
+  #============ NO CONTENT UNDER THIS LINE!
+  password: "Passw0rd"
